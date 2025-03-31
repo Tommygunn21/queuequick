@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate  # <-- Add this!
 from config import Config
 from models import db, Appointment
 
@@ -7,6 +8,9 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
+
+# Add this to enable Flask-Migrate
+migrate = Migrate(app, db)
 
 # Homepage route
 @app.route('/')
@@ -26,9 +30,9 @@ def book_appointment():
         new_appointment = Appointment(name=name, email=email, date=date, time=time)
         db.session.add(new_appointment)
         db.session.commit()
-        
+
         return redirect(url_for('success'))
-    
+
     return render_template('book.html')
 
 # Success route
@@ -43,7 +47,5 @@ def manage_appointments():
     return render_template('manage.html', appointments=appointments)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
-
+    app.run(host='0.0.0.0', port=5001)
 
