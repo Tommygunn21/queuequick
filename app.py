@@ -1,24 +1,32 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template
 from models import db
-from config import Config
+import os
 
 app = Flask(__name__)
-# Load configuration
-app.config.from_object(Config)
 
-# Initialize the database
+# Database Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize Database
 db.init_app(app)
 
-# Create tables before the first request
+# Create Tables if they don't exist
 with app.app_context():
     db.create_all()
 
+# Home Route
 @app.route('/')
 def home():
-    return "QueueQuick is Live!"
+    return render_template('index.html')
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=False)
+# Example Route (optional)
+@app.route('/book')
+def book():
+    return "Booking Page Placeholder"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001)
+
 
 
