@@ -1,46 +1,49 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-import os
+from config import Config
+from models import db, Appointment
 
-# Initialize Flask app
 app = Flask(__name__)
+app.config.from_object(Config)
 
-# Database configuration using Render's DATABASE_URL
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize the database
-from models import db
 db.init_app(app)
 
-# Initialize Flask-Migrate
-migrate = Migrate(app, db)
-
-# Route to render homepage
+# Homepage route
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Route to display all appointments (sample future functionality)
-@app.route('/appointments')
-def appointments():
-    from models import Appointment
-    all_appointments = Appointment.query.all()
-    return render_template('appointments.html', appointments=all_appointments)
+# Route to book an appointment
+@app.route('/book', methods=['GET', 'POST'])
+def book_appointment():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        date = request.form['date']
+        time = request.form['time']
 
-# Route for adding sample appointment (temporary for testing)
-@app.route('/add_sample')
-def add_sample():
-    from models import Appointment
-    new_appointment = Appointment(customer_name='John Doe', appointment_time='2025-04-05 10:00:00')
-    db.session.add(new_appointment)
-    db.session.commit()
-    return "Sample appointment added!"
+        # Create new appointment and save it to the database
+        new_appointment = Appointment(name=name, email=email, date=date, time=time)
+        db.session.add(new_appointment)
+        db.session.commit()
+        
+        return redirect(url_for('success'))
+    
+    return render_template('book.html')
 
-# Run the app if launched directly
+# Success route
+@app.route('/success')
+def success():
+    return render_template('success.html')
+
+# Route to manage appointments
+@app.route('/manage')
+def manage_appointments():
+    appointments = Appointment.query.all()
+    return render_template('manage.html', appointments=appointments)
+
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=5000)
 
 
 

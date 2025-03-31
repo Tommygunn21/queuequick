@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QueueQuick - Welcome!</title>
+    <title>QueueQuick - Home</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <h1>Welcome to QueueQuick!</h1>
-    <p>This is your homepage. Everything is working perfectly!</p>
+    <p>QueueQuick helps you manage appointments seamlessly.</p>
+
+    <a href="{{ url_for('book_appointment') }}">Book an Appointment</a> |
+    <a href="{{ url_for('manage_appointments') }}">Manage Appointments</a>
 </body>
 </html>
 
