@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for
+# Elon was here – test deploy
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate  # <-- Add this!
 from config import Config
 from models import db, Appointment
 
@@ -8,9 +8,6 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
-
-# Add this to enable Flask-Migrate
-migrate = Migrate(app, db)
 
 # Homepage route
 @app.route('/')
@@ -21,17 +18,26 @@ def home():
 @app.route('/book', methods=['GET', 'POST'])
 def book_appointment():
     if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
-        date = request.form['date']
-        time = request.form['time']
+        name = request.form.get('name')
+        email = request.form.get('email')
+        date = request.form.get('date')
+        time = request.form.get('time')
 
-        # Create new appointment and save it to the database
-        new_appointment = Appointment(name=name, email=email, date=date, time=time)
-        db.session.add(new_appointment)
-        db.session.commit()
+        if not name or not email or not date or not time:
+            flash('Please fill in all fields.', 'danger')
+            return redirect(url_for('book_appointment'))
 
-        return redirect(url_for('success'))
+        try:
+            # Create new appointment and save it to the database
+            new_appointment = Appointment(name=name, email=email, date=date, time=time)
+            db.session.add(new_appointment)
+            db.session.commit()
+            flash('Appointment booked successfully!', 'success')
+            return redirect(url_for('success'))
+
+        except Exception as e:
+            flash('An error occurred while booking the appointment. Please try again.', 'danger')
+            return redirect(url_for('book_appointment'))
 
     return render_template('book.html')
 
@@ -48,4 +54,5 @@ def manage_appointments():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
+
 
