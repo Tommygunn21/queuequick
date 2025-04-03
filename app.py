@@ -45,10 +45,6 @@ def update_client_score(client):
         client.score = "green"
 
 # === ROUTES ===
-@app.route('/init-db')
-def init_db():
-    db.create_all()
-    return jsonify({"message": "Database tables created"})
 @app.route("/appointments", methods=["POST"])
 def create_appointment():
     name = request.json.get("client")
@@ -109,6 +105,12 @@ def get_clients():
         "late_count": c.late_count,
         "no_show_count": c.no_show_count
     } for c in all_clients})
+
+@app.route('/init-db')
+def init_db():
+    db.drop_all()
+    db.create_all()
+    return jsonify({"message": "Database tables dropped and recreated"})
 
 # === ERROR HANDLING ===
 logging.basicConfig(level=logging.INFO)
