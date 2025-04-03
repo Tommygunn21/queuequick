@@ -4,23 +4,53 @@ import logging
 
 app = Flask(__name__)
 
-# Dummy database (in-memory for now)
+# In-memory appointment list
 appointments = [
     {
         "id": 1,
         "client": "Tom",
-        "time": datetime(2024, 4, 3, 10, 0),  # Example date
+        "time": datetime(2025, 4, 3, 10, 0),  # Example future time
         "status": "booked"
     }
 ]
 
-# Business policy configuration
+# Client score tracking
+clients = {
+    "Tom": {
+        "score": "green",
+        "late_count": 0,
+        "no_show_count": 0
+    }
+}
+
+# Business policy config
 business_policy = {
     "allow_reschedule": True,
     "reschedule_min_notice": 120,  # minutes
     "allow_late_notice": True,
     "late_grace_period": 10,       # minutes
 }
+
+# Score update logic
+def update_client_score(client_name):
+    client = clients.get(client_name)
+    if not client:
+        clients[client_name] = {
+            "score": "green",
+            "late_count": 0,
+            "no_show_count": 0
+        }
+        client = clients[client_name]
+
+    late = client["late_count"]
+    no_show = client["no_show_count"]
+
+    if no_show >= 3 or late >= 5:
+        client["score"] = "red"
+    elif no_show >= 1 or late >= 2:
+        client["score"] = "yellow"
+    else:
+        client["score"] = "green"
 
 @app.route('/')
 def index():
@@ -29,7 +59,6 @@ def index():
 @app.route('/appointments', methods=['GET', 'POST'])
 def appointments_view():
     if request.method == 'POST':
-        # Handle new appointment (placeholder)
         client_name = request.form.get("client", "Unknown")
         appointment_time = datetime.now()
         new_id = len(appointments) + 1
@@ -39,6 +68,12 @@ def appointments_view():
             "time": appointment_time,
             "status": "booked"
         })
+        if client_name not in clients:
+            clients[client_name] = {
+                "score": "green",
+                "late_count": 0,
+                "no_show_count": 0
+            }
         return redirect(url_for('appointments_view'))
 
     return render_template('appointments.html', appointments=appointments)
@@ -53,57 +88,5 @@ def reschedule(appointment_id):
     time_until_appt = (appointment["time"] - now).total_seconds() / 60
 
     if not business_policy["allow_reschedule"]:
-        return jsonify({"error": "Rescheduling not allowed"}), 403
-
-    if time_until_appt < business_policy["reschedule_min_notice"]:
-        return jsonify({"error": f"Rescheduling must be at least {business_policy['reschedule_min_notice']} minutes in advance"}), 403
-
-    appointment["status"] = "rescheduled"
-
-    return jsonify({
-        "message": "Reschedule request received",
-        "appointment": {
-            "id": appointment["id"],
-            "client": appointment["client"],
-            "status": appointment["status"]
-        }
-    }), 200
-
-@app.route('/running-late/<int:appointment_id>', methods=['POST'])
-def running_late(appointment_id):
-    appointment = next((a for a in appointments if a["id"] == appointment_id), None)
-    if not appointment:
-        return jsonify({"error": "Appointment not found"}), 404
-
-    now = datetime.now()
-    minutes_late = (now - appointment["time"]).total_seconds() / 60
-
-    if not business_policy["allow_late_notice"]:
-        return jsonify({"error": "Late notice not allowed"}), 403
-
-    if minutes_late > business_policy["late_grace_period"]:
-        return jsonify({"error": "Too late to notify. Appointment may be marked as no-show."}), 403
-
-    appointment["status"] = "late"
-
-    return jsonify({
-        "message": "Late notice received",
-        "appointment": {
-            "id": appointment["id"],
-            "client": appointment["client"],
-            "status": appointment["status"]
-        }
-    }), 200
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-
-@app.errorhandler(Exception)
-def handle_exception(e):
-    app.logger.error(f"Unhandled Exception: {str(e)}")
-    return jsonify({"error": "Something went wrong on the server."}), 500
-
-# Run locally
-if __name__ == "__main__":
-    app.run(port=5001, debug=True)
+        return jsonify({"error": "Rescheduling not allowed"}),
 
