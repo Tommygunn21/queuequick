@@ -8,6 +8,10 @@ app.config.from_pyfile('config.py')
 # Initialize database
 db.init_app(app)
 
+@app.route('/cause-error')
+def cause_error():
+    raise Exception("Intentional test error from Elon")
+
 @app.route('/')
 def index():
     return render_template('index.html')
