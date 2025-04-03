@@ -1,58 +1,43 @@
-# Elon was here – test deploy
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-from config import Config
-from models import db, Appointment
+from flask import Flask, request, jsonify, render_template, redirect, url_for
+from models import db
+import logging
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.config.from_pyfile('config.py')
 
+# Initialize database
 db.init_app(app)
 
-# Homepage route
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-# Route to book an appointment
-@app.route('/book', methods=['GET', 'POST'])
-def book_appointment():
+@app.route('/appointments', methods=['GET', 'POST'])
+def appointments():
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        date = request.form.get('date')
-        time = request.form.get('time')
+        # Example: handle booking
+        data = request.form
+        # You can add your booking logic here
+        return redirect(url_for('appointments'))
 
-        if not name or not email or not date or not time:
-            flash('Please fill in all fields.', 'danger')
-            return redirect(url_for('book_appointment'))
+    # Otherwise, return list of appointments (example data)
+    example_appointments = [
+        {"name": "Tom", "time": "10:00 AM"},
+        {"name": "Lisa", "time": "10:30 AM"}
+    ]
+    return render_template('appointments.html', appointments=example_appointments)
 
-        try:
-            # Create new appointment and save it to the database
-            new_appointment = Appointment(name=name, email=email, date=date, time=time)
-            db.session.add(new_appointment)
-            db.session.commit()
-            flash('Appointment booked successfully!', 'success')
-            return redirect(url_for('success'))
+# === GLOBAL ERROR HANDLING ===
 
-        except Exception as e:
-            flash('An error occurred while booking the appointment. Please try again.', 'danger')
-            return redirect(url_for('book_appointment'))
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
-    return render_template('book.html')
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"Unhandled Exception: {str(e)}")
+    return jsonify({"error": "Something went wrong on the server."}), 500
 
-# Success route
-@app.route('/success')
-def success():
-    return render_template('success.html')
-
-# Route to manage appointments
-@app.route('/manage')
-def manage_appointments():
-    appointments = Appointment.query.all()
-    return render_template('manage.html', appointments=appointments)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
-
+# === RUN FLASK ===
+if __name__ == "__main__":
+    app.run(port=5001, debug=True)
 
