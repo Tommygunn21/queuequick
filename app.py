@@ -45,6 +45,10 @@ def update_client_score(client):
         client.score = "green"
 
 # === ROUTES ===
+@app.route('/init-db')
+def init_db():
+    db.create_all()
+    return jsonify({"message": "Database tables created"})
 @app.route("/appointments", methods=["POST"])
 def create_appointment():
     name = request.json.get("client")
