@@ -1,43 +1,16 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
-from models import db
+from datetime import datetime
 import logging
 
 app = Flask(__name__)
-app.config.from_pyfile('config.py')
 
-# Initialize database
-db.init_app(app)
-
-@app.route('/cause-error')
-def cause_error():
-    raise Exception("Intentional test error from Elon")
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/appointments', methods=['GET', 'POST'])
-def appointments():
-    if request.method == 'POST':
-        # Example: handle booking
-        data = request.form
-        # You can add your booking logic here
-        return redirect(url_for('appointments'))
-
-    # Otherwise, return list of appointments (example data)
-    example_appointments = [
-        {"name": "Tom", "time": "10:00 AM"},
-        {"name": "Lisa", "time": "10:30 AM"}
-    ]
-    return render_template('appointments.html', appointments=example_appointments)
-from datetime import datetime, timedelta
-
-# Temporary in-memory example appointment list
+# Dummy database (in-memory for now)
 appointments = [
     {
         "id": 1,
         "client": "Tom",
-        "time": datetime(2024, 4, 3, 10, 0),  # Tomorrow at 10:00 AM
+        "time": datetime(2024, 4, 3, 10, 0),  # Example date
+        "status": "booked"
     }
 ]
 
@@ -48,6 +21,27 @@ business_policy = {
     "allow_late_notice": True,
     "late_grace_period": 10,       # minutes
 }
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/appointments', methods=['GET', 'POST'])
+def appointments_view():
+    if request.method == 'POST':
+        # Handle new appointment (placeholder)
+        client_name = request.form.get("client", "Unknown")
+        appointment_time = datetime.now()
+        new_id = len(appointments) + 1
+        appointments.append({
+            "id": new_id,
+            "client": client_name,
+            "time": appointment_time,
+            "status": "booked"
+        })
+        return redirect(url_for('appointments_view'))
+
+    return render_template('appointments.html', appointments=appointments)
 
 @app.route('/reschedule/<int:appointment_id>', methods=['POST'])
 def reschedule(appointment_id):
@@ -64,8 +58,16 @@ def reschedule(appointment_id):
     if time_until_appt < business_policy["reschedule_min_notice"]:
         return jsonify({"error": f"Rescheduling must be at least {business_policy['reschedule_min_notice']} minutes in advance"}), 403
 
-    # In real version: update appointment in DB
-    return jsonify({"message": "Reschedule request received"}), 200
+    appointment["status"] = "rescheduled"
+
+    return jsonify({
+        "message": "Reschedule request received",
+        "appointment": {
+            "id": appointment["id"],
+            "client": appointment["client"],
+            "status": appointment["status"]
+        }
+    }), 200
 
 @app.route('/running-late/<int:appointment_id>', methods=['POST'])
 def running_late(appointment_id):
@@ -82,10 +84,16 @@ def running_late(appointment_id):
     if minutes_late > business_policy["late_grace_period"]:
         return jsonify({"error": "Too late to notify. Appointment may be marked as no-show."}), 403
 
-    # In real version: flag appointment as 'late' in DB
-    return jsonify({"message": "Late notice received"}), 200
+    appointment["status"] = "late"
 
-# === GLOBAL ERROR HANDLING ===
+    return jsonify({
+        "message": "Late notice received",
+        "appointment": {
+            "id": appointment["id"],
+            "client": appointment["client"],
+            "status": appointment["status"]
+        }
+    }), 200
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -95,7 +103,7 @@ def handle_exception(e):
     app.logger.error(f"Unhandled Exception: {str(e)}")
     return jsonify({"error": "Something went wrong on the server."}), 500
 
-# === RUN FLASK ===
+# Run locally
 if __name__ == "__main__":
     app.run(port=5001, debug=True)
 
